@@ -1,5 +1,6 @@
 package com.seepine.esign.module.sign;
 
+import com.seepine.esign.module.sign.file.dto.Positions;
 import com.seepine.esign.module.sign.flow.create.enums.WillingnessAuthMode;
 import java.io.ByteArrayOutputStream;
 import java.util.List;
@@ -20,8 +21,10 @@ public class SignFlowDto {
 
   /** 组织盖章位置关键词，例如：甲方盖章： */
   String orgSignKeyword;
+  List<Positions> orgSignPositions;
   /** 个人盖章位置关键词，例如：乙方盖章/签字： */
   String psnSignKeyword;
+  List<Positions> psnSignPositions;
 
   /**
    * 组织印章id，若外部企业，需要先授权

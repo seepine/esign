@@ -22,8 +22,8 @@ public class SignFlowCreateByFileTest {
             SignFlowDto.builder()
                 .contractName("自由职业者协议.docx")
                 .contractFile(contract)
-                .orgSignKeyword("甲方：")
-                .psnSignKeyword("乙方（自由职业者）：")
+                .orgSignKeyword("甲方：") // .orgSignPositions() 也支持直接输入坐标
+                .psnSignKeyword("乙方（自由职业者）：") // .psnSignPositions() 也支持直接输入坐标
                 .orgSealId("c889d40b-5125-4dd5-9533-fbe139d536a1")
                 .orgSealPagingAll(true)
                 .psnFullName("黄**")

@@ -6,6 +6,7 @@ import com.seepine.esign.module.sign.file.SignFileKeywordPositionsReq;
 import com.seepine.esign.module.sign.file.SignFileKeywordPositionsRes;
 import com.seepine.esign.module.sign.file.SignFileUploadUtil;
 import com.seepine.esign.module.sign.file.dto.KeywordPosition;
+import com.seepine.esign.module.sign.file.dto.Positions;
 import com.seepine.esign.module.sign.flow.*;
 import com.seepine.esign.module.sign.flow.create.Docs;
 import com.seepine.esign.module.sign.flow.create.SignFlowConfig;
@@ -41,8 +42,7 @@ public class SignFlowUtil {
   public static SignFlowRes create(ESignClient eSignClient, SignFlowDto dto)
       throws ValidateRunException, ESignException {
     Validate.nonBlank(dto.getContractName(), "合同文件名不能为空");
-    Validate.nonBlank(dto.getOrgSignKeyword(), "企业盖章位置关键词不能为空");
-    Validate.nonBlank(dto.getPsnSignKeyword(), "个人盖章位置关键词不能为空");
+
     Validate.nonBlank(dto.getOrgSealId(), "企业印章id不能为空");
     Validate.nonBlank(dto.getPsnPhone(), "个人手机号不能为空");
     Validate.nonBlank(dto.getPsnFullName(), "企业印章id不能为空");
@@ -57,22 +57,30 @@ public class SignFlowUtil {
     String fileId =
         SignFileUploadUtil.uploadV3(eSignClient, dto.getContractName(), dto.getContractFile());
 
-    SignFileKeywordPositionsRes postRes =
-        eSignClient.execute(
-            SignFileKeywordPositionsReq.builder()
-                .fileId(fileId)
-                .keywords(Arrays.asList(dto.getOrgSignKeyword(), dto.getPsnSignKeyword()))
-                .build());
-    if (!postRes.isSuccess()) {
-      throw new ESignException(postRes.getMessage());
+    List<Positions> orgSignPosition = dto.getOrgSignPositions();
+    List<Positions> psnSignPositions = dto.getPsnSignPositions();
+    if (Objects.isEmpty(orgSignPosition) || Objects.isEmpty(psnSignPositions)) {
+      Validate.nonBlank(dto.getOrgSignKeyword(), "企业盖章位置坐标和关键词不能都为空");
+      Validate.nonBlank(dto.getPsnSignKeyword(), "个人盖章位置坐标和关键词不能都为空");
+      SignFileKeywordPositionsRes postRes =
+          eSignClient.execute(
+              SignFileKeywordPositionsReq.builder()
+                  .fileId(fileId)
+                  .keywords(Arrays.asList(dto.getOrgSignKeyword(), dto.getPsnSignKeyword()))
+                  .build());
+      if (!postRes.isSuccess()) {
+        throw new ESignException(postRes.getMessage());
+      }
+      Optional<KeywordPosition> findFirst =
+          postRes.getKeywordPositions().stream()
+              .filter(item -> !item.getSearchResult())
+              .findFirst();
+      if (findFirst.isPresent()) {
+        throw new ESignException("合同模板中未找到印章坐标：" + findFirst.get().getKeyword());
+      }
+      orgSignPosition = postRes.getKeywordPositions().get(0).getPositions();
+      psnSignPositions = postRes.getKeywordPositions().get(1).getPositions();
     }
-    Optional<KeywordPosition> findFirst =
-        postRes.getKeywordPositions().stream().filter(item -> !item.getSearchResult()).findFirst();
-    if (findFirst.isPresent()) {
-      throw new ESignException("合同模板中未找到印章坐标：" + findFirst.get().getKeyword());
-    }
-    KeywordPosition orgPosition = postRes.getKeywordPositions().get(0);
-    KeywordPosition psnPosition = postRes.getKeywordPositions().get(1);
 
     List<Signer> signers =
         new ArrayList<>(
@@ -81,7 +89,7 @@ public class SignFlowUtil {
                     // 机构
                     .signerType(1)
                     .signFields(
-                        orgPosition.getPositions().stream()
+                        orgSignPosition.stream()
                             .map(
                                 item ->
                                     SignField.builder()
@@ -117,7 +125,7 @@ public class SignFlowUtil {
                             .psnInfo(PsnInfo.builder().psnName(dto.psnFullName).build())
                             .build())
                     .signFields(
-                        psnPosition.getPositions().stream()
+                        psnSignPositions.stream()
                             .map(
                                 item ->
                                     SignField.builder()
@@ -159,23 +167,12 @@ public class SignFlowUtil {
                           .signFieldStyle(2) // 1单页 2骑缝签章
                           .signFieldPosition(
                               SignFieldPosition.builder()
-                                  .positionPage(
-                                      orgPosition.getPositions().get(0).getPageNum().toString())
+                                  .positionPage(orgSignPosition.get(0).getPageNum().toString())
                                   .positionX(
-                                      orgPosition
-                                              .getPositions()
-                                              .get(0)
-                                              .getCoordinates()
-                                              .get(0)
-                                              .getPositionX()
+                                      orgSignPosition.get(0).getCoordinates().get(0).getPositionX()
                                           + 50)
                                   .positionY(
-                                      orgPosition
-                                          .getPositions()
-                                          .get(0)
-                                          .getCoordinates()
-                                          .get(0)
-                                          .getPositionY())
+                                      orgSignPosition.get(0).getCoordinates().get(0).getPositionY())
                                   .build())
                           .build())
                   .build());
