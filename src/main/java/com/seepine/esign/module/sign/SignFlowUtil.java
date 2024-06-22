@@ -258,6 +258,12 @@ public class SignFlowUtil {
     if (!res.isSuccess()) {
       throw new ESignException(res.getMessage());
     }
+    // 机构签署方信息
+    com.seepine.esign.module.sign.flow.querydetail.Signer.OrgSigner orgSigner =
+        res.getSigners().get(0).getOrgSigner();
+    // 个人签署方信息
+    com.seepine.esign.module.sign.flow.querydetail.Signer.PsnInfo psnSigner =
+        res.getSigners().get(1).getPsnSigner();
     if (res.isFinish()) {
       // 下载合同
       SignFlowFileDownloadUrlRes downloadUrlRes =
@@ -269,9 +275,21 @@ public class SignFlowUtil {
           .signFlowStatus(res.getSignFlowStatus())
           // 只取签署文件第一个
           .downloadUrl(downloadUrlRes.getFiles().get(0).getDownloadUrl())
+          .orgId(orgSigner.getOrgId())
+          .orgName(orgSigner.getOrgName())
+          .psnId(psnSigner.getPsnId())
+          .psnName(psnSigner.getPsnName())
+          .psnPhone(psnSigner.getPsnAccount().getAccountMobile())
           .build();
     }
-    return SignFlowQuery.builder().signFlowStatus(res.getSignFlowStatus()).build();
+    return SignFlowQuery.builder()
+        .signFlowStatus(res.getSignFlowStatus())
+        .orgId(orgSigner.getOrgId())
+        .orgName(orgSigner.getOrgName())
+        .psnId(psnSigner.getPsnId())
+        .psnName(psnSigner.getPsnName())
+        .psnPhone(psnSigner.getPsnAccount().getAccountMobile())
+        .build();
   }
 
   @Data
@@ -306,5 +324,12 @@ public class SignFlowUtil {
     }
     /** 已签署文件下载链接（有效期为60分钟，过期后可以重新调用接口获取新的下载地址） */
     String downloadUrl;
+
+    String orgId;
+    String orgName;
+
+    String psnId;
+    String psnName;
+    String psnPhone;
   }
 }
