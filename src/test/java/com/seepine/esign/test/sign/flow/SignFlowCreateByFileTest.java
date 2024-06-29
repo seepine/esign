@@ -1,6 +1,7 @@
 package com.seepine.esign.test.sign.flow;
 
 import com.seepine.esign.module.sign.SignFlowDto;
+import com.seepine.esign.module.sign.SignFlowRes;
 import com.seepine.esign.module.sign.SignFlowUtil;
 import com.seepine.esign.test.ESignClientHelp;
 import com.seepine.esign.test.sign.file.FileKeywordPositionsTest;
@@ -16,7 +17,7 @@ public class SignFlowCreateByFileTest {
     ByteArrayOutputStream contract = getFile();
 
     // 快速创建合同，若想自由控制，可进入 SignFlowUtil.create 参考
-    SignFlowUtil.SignFlowRes res =
+    SignFlowRes res =
         SignFlowUtil.create(
             ESignClientHelp.build(),
             SignFlowDto.builder()

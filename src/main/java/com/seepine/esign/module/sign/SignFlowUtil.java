@@ -25,10 +25,6 @@ import com.seepine.tool.util.Objects;
 import com.seepine.tool.util.Validate;
 import java.util.*;
 import java.util.stream.Collectors;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 public class SignFlowUtil {
 
@@ -223,23 +219,6 @@ public class SignFlowUtil {
         .build();
   }
 
-  @Data
-  @Builder
-  @NoArgsConstructor
-  @AllArgsConstructor
-  public static class SignFlowRes {
-    /** 签署流程ID（建议开发者保存此流程ID） */
-    String signFlowId;
-    /** 签署短链接（有效期180天） */
-    String shortUrl;
-    /**
-     * 签署长链接（永久有效）
-     *
-     * <p>【注】支持自定义域名，微信小程序H5内嵌场景需要使用长链接
-     */
-    String url;
-  }
-
   /**
    * 查询流程结果
    *
@@ -256,11 +235,16 @@ public class SignFlowUtil {
       throw new ESignException(res.getMessage());
     }
     // 机构签署方信息
-    com.seepine.esign.module.sign.flow.querydetail.Signer.OrgSigner orgSigner =
-        res.getSigners().get(0).getOrgSigner();
+    com.seepine.esign.module.sign.flow.querydetail.Signer.OrgSigner orgSigner;
     // 个人签署方信息
-    com.seepine.esign.module.sign.flow.querydetail.Signer.PsnInfo psnSigner =
-        res.getSigners().get(1).getPsnSigner();
+    com.seepine.esign.module.sign.flow.querydetail.Signer.PsnInfo psnSigner;
+    if (res.getSigners().get(0).getSignerType() == 1) {
+      orgSigner = res.getSigners().get(0).getOrgSigner();
+      psnSigner = res.getSigners().get(1).getPsnSigner();
+    } else {
+      orgSigner = res.getSigners().get(1).getOrgSigner();
+      psnSigner = res.getSigners().get(0).getPsnSigner();
+    }
     if (res.isFinish()) {
       // 下载合同
       SignFlowFileDownloadUrlRes downloadUrlRes =
@@ -287,46 +271,5 @@ public class SignFlowUtil {
         .psnName(psnSigner.getPsnName())
         .psnPhone(psnSigner.getPsnAccount().getAccountMobile())
         .build();
-  }
-
-  @Data
-  @Builder
-  @NoArgsConstructor
-  @AllArgsConstructor
-  public static class SignFlowQuery {
-    /**
-     * 当前流程的状态
-     *
-     * <p>0 - 草稿
-     *
-     * <p>1 - 签署中
-     *
-     * <p>2 - 完成
-     *
-     * <p>3 - 撤销
-     *
-     * <p>5 - 过期（签署截至日期到期后触发）
-     *
-     * <p>7 - 拒签
-     */
-    Integer signFlowStatus;
-
-    /**
-     * 是否完成签署
-     *
-     * @return true/false
-     */
-    public boolean isFinish() {
-      return Integer.valueOf(2).equals(signFlowStatus);
-    }
-    /** 已签署文件下载链接（有效期为60分钟，过期后可以重新调用接口获取新的下载地址） */
-    String downloadUrl;
-
-    String orgId;
-    String orgName;
-
-    String psnId;
-    String psnName;
-    String psnPhone;
   }
 }

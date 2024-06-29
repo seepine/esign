@@ -4,6 +4,7 @@ import java.io.Serializable;
 
 public abstract class ESignRes implements Serializable {
   private static final Integer ZERO = 0;
+  private static final long serialVersionUID = 1L;
 
   Integer code;
   String message;
