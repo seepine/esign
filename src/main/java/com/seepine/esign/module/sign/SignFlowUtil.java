@@ -100,9 +100,8 @@ public class SignFlowUtil {
                                                         .positionPage(item.getPageNum().toString())
                                                         .positionX(
                                                             item.getCoordinates()
-                                                                    .get(0)
-                                                                    .getPositionX()
-                                                                + 50)
+                                                                .get(0)
+                                                                .getPositionX())
                                                         .positionY(
                                                             item.getCoordinates()
                                                                 .get(0)
@@ -135,14 +134,12 @@ public class SignFlowUtil {
                                                         .positionPage(item.getPageNum().toString())
                                                         .positionX(
                                                             item.getCoordinates()
-                                                                    .get(0)
-                                                                    .getPositionX()
-                                                                + 50)
+                                                                .get(0)
+                                                                .getPositionX())
                                                         .positionY(
                                                             item.getCoordinates()
-                                                                    .get(0)
-                                                                    .getPositionY()
-                                                                + 10)
+                                                                .get(0)
+                                                                .getPositionY())
                                                         .build())
                                                 .build())
                                         .build())
@@ -165,8 +162,7 @@ public class SignFlowUtil {
                               SignFieldPosition.builder()
                                   .positionPage(orgSignPosition.get(0).getPageNum().toString())
                                   .positionX(
-                                      orgSignPosition.get(0).getCoordinates().get(0).getPositionX()
-                                          + 50)
+                                      orgSignPosition.get(0).getCoordinates().get(0).getPositionX())
                                   .positionY(
                                       orgSignPosition.get(0).getCoordinates().get(0).getPositionY())
                                   .build())
