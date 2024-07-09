@@ -20,10 +20,13 @@ import com.seepine.esign.module.sign.flow.create.signer.psn.PsnInfo;
 import com.seepine.esign.module.sign.flow.create.signflowconfig.AuthConfig;
 import com.seepine.esign.module.sign.flow.create.signflowconfig.RedirectConfig;
 import com.seepine.esign.module.sign.flow.signurl.Operator;
+import com.seepine.http.exception.HttpException;
 import com.seepine.tool.exception.ValidateRunException;
 import com.seepine.tool.util.Objects;
+import com.seepine.tool.util.Retry;
 import com.seepine.tool.util.Validate;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 public class SignFlowUtil {
@@ -225,8 +228,28 @@ public class SignFlowUtil {
   public static SignFlowQuery query(ESignClient eSignClient, String signFlowId)
       throws ESignException {
     Validate.nonBlank(signFlowId, "流程id不能为空");
-    SignFlowQueryDetailRes res =
-        eSignClient.execute(SignFlowQueryDetailReq.builder().signFlowId(signFlowId).build());
+    SignFlowQueryDetailRes res;
+    AtomicReference<Exception> theE = new AtomicReference<>();
+    res =
+        Retry.run(
+            3,
+            200,
+            () -> {
+              try {
+                return eSignClient.execute(
+                    SignFlowQueryDetailReq.builder().signFlowId(signFlowId).build());
+              } catch (HttpException e) {
+                theE.set(e);
+                return null;
+              }
+            });
+    if (res == null) {
+      if (theE.get().getMessage().contains("unexpected end of stream on")) {
+        throw new ESignException("网络异常，请重试");
+      } else {
+        throw new ESignException(theE.get());
+      }
+    }
     if (!res.isSuccess()) {
       throw new ESignException(res.getMessage());
     }
