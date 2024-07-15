@@ -1,7 +1,12 @@
 package com.seepine.esign.module.sign.flow;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.seepine.esign.common.ESignRes;
 import com.seepine.esign.module.sign.flow.queryface.IdentityDetail;
+import com.seepine.json.Json;
+import com.seepine.json.JsonObject;
+import com.seepine.tool.util.Objects;
 import lombok.Getter;
 import lombok.ToString;
 
@@ -23,4 +28,28 @@ public class SignFlowQueryFaceRes extends ESignRes {
   IdentityDetail identityDetail;
   /** 认证类型： 1：意愿认证 2：实名认证 */
   String identityBizType;
+
+  public void transfer() {
+    if (!isSuccess()) {
+      return;
+    }
+    JsonNode data = getData();
+    if (data == null) {
+      setCode(-1);
+      setMessage("Not found");
+      return;
+    }
+    ArrayNode arr = (ArrayNode) data;
+    if (arr.size() <= 0) {
+      setCode(-1);
+      setMessage("Not found");
+      return;
+    }
+    JsonObject obj = new JsonObject(arr.get(0));
+    this.identityFlowId = obj.getStr("identityFlowId");
+    this.identityType = obj.getStr("identityType");
+    this.identityBizType = obj.getStr("identityBizType");
+    this.identityDetail =
+        Json.parse(Objects.require(obj.getStr("identityDetail"), "{}"), IdentityDetail.class);
+  }
 }

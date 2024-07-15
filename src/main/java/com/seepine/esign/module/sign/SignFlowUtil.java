@@ -218,6 +218,9 @@ public class SignFlowUtil {
         .build();
   }
 
+  public static SignFlowQuery query(ESignClient eSignClient, String signFlowId) {
+    return query(eSignClient, signFlowId, false);
+  }
   /**
    * 查询流程结果
    *
@@ -225,7 +228,7 @@ public class SignFlowUtil {
    * @param signFlowId 流程id
    * @return 查询结果，status和downloadUrl
    */
-  public static SignFlowQuery query(ESignClient eSignClient, String signFlowId)
+  public static SignFlowQuery query(ESignClient eSignClient, String signFlowId, boolean queryFace)
       throws ESignException {
     Validate.nonBlank(signFlowId, "流程id不能为空");
     SignFlowQueryDetailRes res;
@@ -271,10 +274,25 @@ public class SignFlowUtil {
       if (!downloadUrlRes.isSuccess()) {
         throw new ESignException(downloadUrlRes.getMessage());
       }
+      String facePhotoUrl = null;
+      if (queryFace) {
+        // 人脸
+        SignFlowQueryFaceRes faceRes =
+            eSignClient.execute(
+                SignFlowQueryFaceReq.builder()
+                    .flowId(signFlowId)
+                    .accountId(psnSigner.getPsnId())
+                    .build());
+        faceRes.transfer();
+        if (faceRes.isSuccess()) {
+          facePhotoUrl = faceRes.getIdentityDetail().getFacePhotoUrl();
+        }
+      }
       return SignFlowQuery.builder()
           .signFlowStatus(res.getSignFlowStatus())
           // 只取签署文件第一个
           .downloadUrl(downloadUrlRes.getFiles().get(0).getDownloadUrl())
+          .facePhotoUrl(facePhotoUrl)
           .orgId(orgSigner.getOrgId())
           .orgName(orgSigner.getOrgName())
           .psnId(psnSigner.getPsnId())

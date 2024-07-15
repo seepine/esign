@@ -1,5 +1,7 @@
 package com.seepine.esign.common;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 import java.io.Serializable;
 
 public abstract class ESignRes implements Serializable {
@@ -8,6 +10,7 @@ public abstract class ESignRes implements Serializable {
 
   Integer code;
   String message;
+  JsonNode data;
 
   public boolean isSuccess() {
     return ZERO.equals(code);
@@ -27,6 +30,14 @@ public abstract class ESignRes implements Serializable {
 
   public void setMessage(String message) {
     this.message = message;
+  }
+
+  public JsonNode getData() {
+    return data;
+  }
+
+  public void setData(JsonNode data) {
+    this.data = data;
   }
 
   @Override

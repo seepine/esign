@@ -9,6 +9,10 @@ public class ESignClient {
     this.properties = properties;
   }
 
+  public ESignProperties getProperties() {
+    return properties;
+  }
+
   public <T extends ESignRes> T execute(ESignReq<T> req) throws ESignException {
     return ESignUtil.request(properties, req);
   }

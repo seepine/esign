@@ -41,6 +41,8 @@ public class SignFlowQuery implements Serializable {
   }
   /** 已签署文件下载链接（有效期为60分钟，过期后可以重新调用接口获取新的下载地址） */
   String downloadUrl;
+  /** 人脸url，签署完成后返回 */
+  String facePhotoUrl;
 
   String orgId;
   String orgName;
