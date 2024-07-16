@@ -25,6 +25,8 @@ import com.seepine.tool.exception.ValidateRunException;
 import com.seepine.tool.util.Objects;
 import com.seepine.tool.util.Retry;
 import com.seepine.tool.util.Validate;
+import jdk.internal.joptsimple.internal.Strings;
+
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -247,7 +249,8 @@ public class SignFlowUtil {
               }
             });
     if (res == null) {
-      if (theE.get().getMessage().contains("unexpected end of stream on")) {
+      if (Objects.require(theE.get().getMessage(), Strings.EMPTY)
+          .contains("unexpected end of stream on")) {
         throw new ESignException("网络异常，请重试");
       } else {
         throw new ESignException(theE.get());
