@@ -24,9 +24,8 @@ import com.seepine.http.exception.HttpException;
 import com.seepine.tool.exception.ValidateRunException;
 import com.seepine.tool.util.Objects;
 import com.seepine.tool.util.Retry;
+import com.seepine.tool.util.Strings;
 import com.seepine.tool.util.Validate;
-import jdk.internal.joptsimple.internal.Strings;
-
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
