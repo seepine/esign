@@ -43,9 +43,9 @@ public class SignFlowUtil {
       throws ValidateRunException, ESignException {
     Validate.nonBlank(dto.getContractName(), "合同文件名不能为空");
 
-    Validate.nonBlank(dto.getOrgSealId(), "企业印章id不能为空");
-    Validate.nonBlank(dto.getPsnPhone(), "个人手机号不能为空");
-    Validate.nonBlank(dto.getPsnFullName(), "企业印章id不能为空");
+    //    Validate.nonBlank(dto.getOrgSealId(), "企业印章id不能为空");
+    //    Validate.nonBlank(dto.getPsnPhone(), "个人手机号不能为空");
+    //    Validate.nonBlank(dto.getPsnFullName(), "个人姓名不能为空");
 
     int idx = dto.getContractName().lastIndexOf(".");
     if (idx < 0) {
@@ -57,100 +57,117 @@ public class SignFlowUtil {
     String fileId =
         SignFileUploadUtil.uploadV3(eSignClient, dto.getContractName(), dto.getContractFile());
 
-    List<Positions> orgSignPosition = dto.getOrgSignPositions();
-    List<Positions> psnSignPositions = dto.getPsnSignPositions();
-    if (Objects.isEmpty(orgSignPosition) || Objects.isEmpty(psnSignPositions)) {
-      Validate.nonBlank(dto.getOrgSignKeyword(), "企业盖章位置坐标和关键词不能都为空");
-      Validate.nonBlank(dto.getPsnSignKeyword(), "个人盖章位置坐标和关键词不能都为空");
-      SignFileKeywordPositionsRes postRes =
-          eSignClient.execute(
-              SignFileKeywordPositionsReq.builder()
-                  .fileId(fileId)
-                  .keywords(Arrays.asList(dto.getOrgSignKeyword(), dto.getPsnSignKeyword()))
-                  .build());
-      if (!postRes.isSuccess()) {
-        throw new ESignException(postRes.getMessage());
+    List<Positions> orgSignPositions =
+        Objects.require(dto.getOrgSignPositions(), Collections.emptyList());
+    List<Positions> psnSignPositions =
+        Objects.require(dto.getPsnSignPositions(), Collections.emptyList());
+    if (Objects.isEmpty(orgSignPositions) && Objects.isEmpty(psnSignPositions)) {
+      boolean hasOrg = Objects.nonBlank(dto.orgSealId);
+      boolean hasPsn = Objects.nonBlank(dto.psnPhone);
+      List<String> keywords = new ArrayList<>();
+      if (hasOrg) {
+        Validate.nonBlank(dto.getOrgSignKeyword(), "企业盖章位置坐标和关键词不能都为空");
+        keywords.add(dto.getOrgSignKeyword());
       }
-      Optional<KeywordPosition> findFirst =
-          postRes.getKeywordPositions().stream()
-              .filter(item -> !item.getSearchResult())
-              .findFirst();
-      if (findFirst.isPresent()) {
-        throw new ESignException("合同模板中未找到印章坐标：" + findFirst.get().getKeyword());
+      if (hasPsn) {
+        Validate.nonBlank(dto.getPsnSignKeyword(), "个人盖章位置坐标和关键词不能都为空");
+        keywords.add(dto.getPsnSignKeyword());
       }
-      orgSignPosition = postRes.getKeywordPositions().get(0).getPositions();
-      psnSignPositions = postRes.getKeywordPositions().get(1).getPositions();
+      if (hasOrg || hasPsn) {
+        SignFileKeywordPositionsRes postRes =
+            eSignClient.execute(
+                SignFileKeywordPositionsReq.builder().fileId(fileId).keywords(keywords).build());
+        if (!postRes.isSuccess()) {
+          throw new ESignException(postRes.getMessage());
+        }
+        Optional<KeywordPosition> findFirst =
+            postRes.getKeywordPositions().stream()
+                .filter(item -> !item.getSearchResult())
+                .findFirst();
+        if (findFirst.isPresent()) {
+          throw new ESignException("合同模板中未找到印章坐标：" + findFirst.get().getKeyword());
+        }
+        if (hasOrg) {
+          orgSignPositions = postRes.getKeywordPositions().get(0).getPositions();
+          if (hasPsn) {
+            psnSignPositions = postRes.getKeywordPositions().get(1).getPositions();
+          }
+        } else {
+          psnSignPositions = postRes.getKeywordPositions().get(0).getPositions();
+        }
+      }
     }
 
-    List<Signer> signers =
-        new ArrayList<>(
-            Arrays.asList(
-                Signer.builder()
-                    // 机构
-                    .signerType(1)
-                    .signFields(
-                        orgSignPosition.stream()
-                            .map(
-                                item ->
-                                    SignField.builder()
-                                        .fileId(fileId)
-                                        .normalSignFieldConfig(
-                                            NormalSignFieldConfig.builder()
-                                                .autoSign(true)
-                                                .assignedSealId(dto.orgSealId)
-                                                .signFieldStyle(1) // 1单页 2骑缝签章
-                                                .signFieldPosition(
-                                                    SignFieldPosition.builder()
-                                                        .positionPage(item.getPageNum().toString())
-                                                        .positionX(
-                                                            item.getCoordinates()
-                                                                .get(0)
-                                                                .getPositionX())
-                                                        .positionY(
-                                                            item.getCoordinates()
-                                                                .get(0)
-                                                                .getPositionY())
-                                                        .build())
-                                                .build())
-                                        .build())
-                            .collect(Collectors.toList()))
-                    .build(),
-                Signer.builder()
-                    // 个人
-                    .signerType(0)
-                    .psnSignerInfo(
-                        PsnSignerInfo.builder()
-                            .psnAccount(dto.psnPhone)
-                            .psnInfo(PsnInfo.builder().psnName(dto.psnFullName).build())
-                            .build())
-                    .signFields(
-                        psnSignPositions.stream()
-                            .map(
-                                item ->
-                                    SignField.builder()
-                                        .fileId(fileId)
-                                        .normalSignFieldConfig(
-                                            NormalSignFieldConfig.builder()
-                                                .signFieldStyle(1)
-                                                .psnSealStyles(dto.getPsnSealStyles())
-                                                .signFieldPosition(
-                                                    SignFieldPosition.builder()
-                                                        .positionPage(item.getPageNum().toString())
-                                                        .positionX(
-                                                            item.getCoordinates()
-                                                                .get(0)
-                                                                .getPositionX())
-                                                        .positionY(
-                                                            item.getCoordinates()
-                                                                .get(0)
-                                                                .getPositionY())
-                                                        .build())
-                                                .build())
-                                        .build())
-                            .collect(Collectors.toList()))
-                    .build()));
+    List<Signer> signers = new ArrayList<>();
+    // 设置企业
+    if (Objects.nonBlank(dto.getOrgSealId())) {
+      Validate.isTrue(orgSignPositions.size() > 0, "企业盖章位置坐标和关键词不能都为空");
+      signers.add(
+          Signer.builder()
+              // 机构
+              .signerType(1)
+              .signFields(
+                  orgSignPositions.stream()
+                      .map(
+                          item ->
+                              SignField.builder()
+                                  .fileId(fileId)
+                                  .normalSignFieldConfig(
+                                      NormalSignFieldConfig.builder()
+                                          .autoSign(true)
+                                          .assignedSealId(dto.orgSealId)
+                                          .signFieldStyle(1) // 1单页 2骑缝签章
+                                          .signFieldPosition(
+                                              SignFieldPosition.builder()
+                                                  .positionPage(item.getPageNum().toString())
+                                                  .positionX(
+                                                      item.getCoordinates().get(0).getPositionX())
+                                                  .positionY(
+                                                      item.getCoordinates().get(0).getPositionY())
+                                                  .build())
+                                          .build())
+                                  .build())
+                      .collect(Collectors.toList()))
+              .build());
+    }
+    // 设置个人
+    if (Objects.nonBlank(dto.getPsnPhone())) {
+      Validate.isTrue(psnSignPositions.size() > 0, "个人盖章位置坐标和关键词不能都为空");
+      Validate.nonBlank(dto.psnFullName, "个人姓名不能为空");
+      signers.add(
+          Signer.builder()
+              // 个人
+              .signerType(0)
+              .psnSignerInfo(
+                  PsnSignerInfo.builder()
+                      .psnAccount(dto.psnPhone)
+                      .psnInfo(PsnInfo.builder().psnName(dto.psnFullName).build())
+                      .build())
+              .signFields(
+                  psnSignPositions.stream()
+                      .map(
+                          item ->
+                              SignField.builder()
+                                  .fileId(fileId)
+                                  .normalSignFieldConfig(
+                                      NormalSignFieldConfig.builder()
+                                          .signFieldStyle(1)
+                                          .psnSealStyles(dto.getPsnSealStyles())
+                                          .signFieldPosition(
+                                              SignFieldPosition.builder()
+                                                  .positionPage(item.getPageNum().toString())
+                                                  .positionX(
+                                                      item.getCoordinates().get(0).getPositionX())
+                                                  .positionY(
+                                                      item.getCoordinates().get(0).getPositionY())
+                                                  .build())
+                                          .build())
+                                  .build())
+                      .collect(Collectors.toList()))
+              .build());
+    }
     // 是否骑缝章
-    if (Boolean.TRUE.equals(dto.orgSealPagingAll)) {
+    if (Objects.nonBlank(dto.getOrgSealId()) && Boolean.TRUE.equals(dto.orgSealPagingAll)) {
       signers
           .get(0)
           .getSignFields()
@@ -164,11 +181,19 @@ public class SignFlowUtil {
                           .signFieldStyle(2) // 1单页 2骑缝签章
                           .signFieldPosition(
                               SignFieldPosition.builder()
-                                  .positionPage(orgSignPosition.get(0).getPageNum().toString())
+                                  .positionPage(orgSignPositions.get(0).getPageNum().toString())
                                   .positionX(
-                                      orgSignPosition.get(0).getCoordinates().get(0).getPositionX())
+                                      orgSignPositions
+                                          .get(0)
+                                          .getCoordinates()
+                                          .get(0)
+                                          .getPositionX())
                                   .positionY(
-                                      orgSignPosition.get(0).getCoordinates().get(0).getPositionY())
+                                      orgSignPositions
+                                          .get(0)
+                                          .getCoordinates()
+                                          .get(0)
+                                          .getPositionY())
                                   .build())
                           .build())
                   .build());
@@ -195,12 +220,16 @@ public class SignFlowUtil {
                                             // 腾讯云刷脸，需要联系交付顾问开通
                                             WillingnessAuthMode.PSN_FACE_TECENT)))
                                 .build())
-                        // 通知回调 .notifyUrl()
+                        // 通知回调
+                        .notifyUrl(dto.notifyUrl)
                         .build())
                 .signers(signers)
                 .build());
     if (!res.isSuccess()) {
       throw new ESignException(res.getMessage());
+    }
+    if (Objects.isBlank(dto.psnPhone)) {
+      return SignFlowRes.builder().signFlowId(res.getSignFlowId()).build();
     }
     SignFlowSignUrlRes getUrlRes =
         eSignClient.execute(
@@ -259,15 +288,28 @@ public class SignFlowUtil {
       throw new ESignException(res.getMessage());
     }
     // 机构签署方信息
-    com.seepine.esign.module.sign.flow.querydetail.Signer.OrgSigner orgSigner;
+    com.seepine.esign.module.sign.flow.querydetail.Signer.OrgSigner orgSigner = null;
     // 个人签署方信息
-    com.seepine.esign.module.sign.flow.querydetail.Signer.PsnInfo psnSigner;
-    if (res.getSigners().get(0).getSignerType() == 1) {
-      orgSigner = res.getSigners().get(0).getOrgSigner();
-      psnSigner = res.getSigners().get(1).getPsnSigner();
-    } else {
-      orgSigner = res.getSigners().get(1).getOrgSigner();
-      psnSigner = res.getSigners().get(0).getPsnSigner();
+    com.seepine.esign.module.sign.flow.querydetail.Signer.PsnInfo psnSigner = null;
+    if (res.getSigners().size() > 0) {
+      orgSigner =
+          res.getSigners().stream()
+              .filter(item -> Objects.equals(item.getSignerType(), 1))
+              .findFirst()
+              .orElse(com.seepine.esign.module.sign.flow.querydetail.Signer.builder().build())
+              .getOrgSigner();
+      psnSigner =
+          res.getSigners().stream()
+              .filter(item -> Objects.equals(item.getSignerType(), 0))
+              .findFirst()
+              .orElse(com.seepine.esign.module.sign.flow.querydetail.Signer.builder().build())
+              .getPsnSigner();
+    }
+    if (orgSigner == null) {
+      orgSigner = com.seepine.esign.module.sign.flow.querydetail.Signer.OrgSigner.builder().build();
+    }
+    if (psnSigner == null) {
+      psnSigner = com.seepine.esign.module.sign.flow.querydetail.Signer.PsnInfo.builder().build();
     }
     if (res.isFinish()) {
       // 下载合同

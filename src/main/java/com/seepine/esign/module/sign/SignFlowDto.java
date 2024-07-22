@@ -26,6 +26,7 @@ public class SignFlowDto implements Serializable {
   String orgSignKeyword;
 
   List<Positions> orgSignPositions;
+
   /** 个人盖章位置关键词，例如：乙方盖章/签字： */
   String psnSignKeyword;
 
